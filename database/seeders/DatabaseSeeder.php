@@ -28,8 +28,8 @@ class DatabaseSeeder extends Seeder
         \App\Models\User::create([
             'role_id' => $adminRole->id,
             'full_name' => 'Guru Pembimbing',
-            'username' => 'admin',
-            'password' => 'password',
+            'username' => env('ADMIN_USERNAME'),
+            'password' => env('ADMIN_PASSWORD'),
             'is_active' => true,
         ]);
 
@@ -38,8 +38,8 @@ class DatabaseSeeder extends Seeder
             'full_name' => 'Agus Setiawan',
             'student_number' => '123456789',
             'class_group' => 'XI RPL 1',
-            'username' => 'kasir',
-            'password' => 'password',
+            'username' => env('KASIR_USERNAME'),
+            'password' => env('KASIR_PASSWORD'),
             'is_active' => true,
         ]);
     }
