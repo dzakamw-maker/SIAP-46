@@ -2,9 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
+use App\Models\TransactionType;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,17 +18,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $adminRole = \App\Models\Role::create([
+        $adminRole = Role::create([
             'name' => 'Admin',
-            'description' => 'Administrator / Guru'
+            'description' => 'Administrator / Guru',
         ]);
 
-        $kasirRole = \App\Models\Role::create([
+        $kasirRole = Role::create([
             'name' => 'Kasir',
-            'description' => 'Siswa / Kasir BNI'
+            'description' => 'Siswa / Kasir BNI',
         ]);
 
-        \App\Models\User::create([
+        User::create([
             'role_id' => $adminRole->id,
             'full_name' => 'Guru Pembimbing',
             'username' => env('ADMIN_USERNAME'),
@@ -33,7 +36,7 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        \App\Models\User::create([
+        User::create([
             'role_id' => $kasirRole->id,
             'full_name' => 'Agus Setiawan',
             'student_number' => '123456789',
@@ -44,14 +47,14 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $types = [
-            'Setor Tunai BNI', 'Setor Tunai Antar Bank', 'PULSA- INDOSAT', 'PULSA-TSEL', 
-            'PULSA-XL', 'PULSA- 3', 'PLN- PREPAID', 'PLN', 'BPJS', 'TOPUP- GOPAY', 
-            'TOPUP- SPAY', 'TOPUP-DANA', 'TELKOM', 'PDAM', 'Tarik Tunai', 'Tagihan Telepon', 'Materai'
+            'Setor Tunai BNI', 'Setor Tunai Antar Bank', 'PULSA- INDOSAT', 'PULSA-TSEL',
+            'PULSA-XL', 'PULSA- 3', 'PLN- PREPAID', 'PLN', 'BPJS', 'TOPUP- GOPAY',
+            'TOPUP- SPAY', 'TOPUP-DANA', 'TELKOM', 'PDAM', 'Tarik Tunai', 'Tagihan Telepon', 'Materai',
         ];
 
-        $typeData = array_map(function($t) {
+        $typeData = array_map(function ($t) {
             return [
-                'code' => \Illuminate\Support\Str::slug($t, '_'),
+                'code' => Str::slug($t, '_'),
                 'name' => $t,
                 'is_active' => true,
                 'created_at' => now(),
@@ -59,6 +62,8 @@ class DatabaseSeeder extends Seeder
             ];
         }, $types);
 
-        \App\Models\TransactionType::insert($typeData);
+        TransactionType::insert($typeData);
+
+        $this->call(DummyDataSeeder::class);
     }
 }

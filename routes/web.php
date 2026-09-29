@@ -1,8 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\AuthController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
 Route::post('/', [AuthController::class, 'login'])->middleware('guest');
@@ -17,7 +16,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [AdminController::class, 'dashboard'])->name('admin.dashboard');
         Route::get('/transactions', [AdminController::class, 'transactions'])->name('admin.transactions');
         Route::get('/attendance', [AdminController::class, 'attendance'])->name('admin.attendance');
+        Route::get('/eod', [AdminController::class, 'eod'])->name('admin.eod');
+        Route::post('/eod/{dailyRecap}/verify', [AdminController::class, 'verifyEod'])->name('admin.eod.verify');
         Route::get('/users/create', [AdminController::class, 'createUser'])->name('admin.users.create');
+        Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('admin.users.edit');
+        Route::get('/users/{user}/delete', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
         Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
     });
 

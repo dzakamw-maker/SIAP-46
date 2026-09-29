@@ -23,10 +23,11 @@ class AuthController extends Controller
             $request->session()->regenerate();
             $user = Auth::user();
 
-            if (!$user->is_active) {
+            if (! $user->is_active) {
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
+
                 return back()->withErrors([
                     'username' => 'Akun Anda tidak aktif.',
                 ]);
@@ -51,6 +52,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/');
     }
 }
