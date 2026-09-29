@@ -42,5 +42,23 @@ class DatabaseSeeder extends Seeder
             'password' => env('KASIR_PASSWORD'),
             'is_active' => true,
         ]);
+
+        $types = [
+            'Setor Tunai BNI', 'Setor Tunai Antar Bank', 'PULSA- INDOSAT', 'PULSA-TSEL', 
+            'PULSA-XL', 'PULSA- 3', 'PLN- PREPAID', 'PLN', 'BPJS', 'TOPUP- GOPAY', 
+            'TOPUP- SPAY', 'TOPUP-DANA', 'TELKOM', 'PDAM', 'Tarik Tunai', 'Tagihan Telepon', 'Materai'
+        ];
+
+        $typeData = array_map(function($t) {
+            return [
+                'code' => \Illuminate\Support\Str::slug($t, '_'),
+                'name' => $t,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }, $types);
+
+        \App\Models\TransactionType::insert($typeData);
     }
 }
