@@ -11,13 +11,13 @@
                 <h3 class="font-semibold text-gray-800 text-lg">Input Transaksi Baru</h3>
             </div>
             <div class="p-6">
-                <form>
+                <form id="transactionForm" onsubmit="return validateTransaction(event)">
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="block mb-2 text-sm font-medium text-gray-700">Jenis Transaksi</label>
-                            <select name="transaction_type_id" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5">
+                            <select name="transaction_type_id" id="transaction_type_id" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5">
                                 @foreach($types as $type)
-                                    <option value="{{ $type->id }}">{{ $type->name }}</option>
+                                    <option value="{{ $type->id }}" data-code="{{ $type->code }}">{{ $type->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -67,6 +67,17 @@
             <p class="text-xs text-gray-500 text-right">Aman</p>
         </div>
 
+        <!-- Status Stok Materai -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <h3 class="text-sm font-medium text-gray-500 mb-1">Status Stok Materai</h3>
+            <p class="text-2xl font-bold text-gray-800 mb-2">{{ $stampsStock }} <span class="text-sm font-normal text-gray-500">pcs</span></p>
+            @if($stampsStock <= 0)
+                <p class="text-xs text-red-500 font-medium">Stok Habis</p>
+            @else
+                <p class="text-xs text-green-500 font-medium">Tersedia</p>
+            @endif
+        </div>
+
         <!-- Transaksi Hari Ini -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100 bg-gray-50">
@@ -78,4 +89,20 @@
         </div>
     </div>
 </div>
+
+<script>
+    function validateTransaction(event) {
+        const typeSelect = document.getElementById('transaction_type_id');
+        const selectedOption = typeSelect.options[typeSelect.selectedIndex];
+        const typeCode = selectedOption.getAttribute('data-code');
+        const stampsStock = {{ $stampsStock }};
+
+        if (typeCode === 'MTR' && stampsStock <= 0) {
+            alert('Transaksi tidak dapat diproses: Stok materai habis! Silakan lakukan restock terlebih dahulu.');
+            event.preventDefault();
+            return false;
+        }
+        return true;
+    }
+</script>
 @endsection
