@@ -17,6 +17,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [AdminController::class, 'dashboard'])->name('admin.dashboard');
         Route::get('/transactions', [AdminController::class, 'transactions'])->name('admin.transactions');
         Route::get('/attendance', [AdminController::class, 'attendance'])->name('admin.attendance');
+        Route::get('/users/create', [AdminController::class, 'createUser'])->name('admin.users.create');
         Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
     });
 

@@ -4,9 +4,9 @@
 
 @section('admin_content')
 <div class="mb-4 flex justify-end">
-    <button class="bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-lg text-sm font-medium">
+    <a href="{{ route('admin.users.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium inline-block">
         + Tambah User Baru
-    </button>
+    </a>
 </div>
 
 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

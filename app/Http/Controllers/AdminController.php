@@ -31,4 +31,12 @@ class AdminController extends Controller
         $users = User::with('role')->get();
         return view('admin.users', compact('users'));
     }
+
+    public function createUser()
+    {
+        // For now, pass roles if needed, or just return the view.
+        // I will pass the roles so the form can use them.
+        $roles = \App\Models\Role::all();
+        return view('admin.users-create', compact('roles'));
+    }
 }
