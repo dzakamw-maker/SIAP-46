@@ -57,7 +57,7 @@
             </div>
         </div>
 
-        <form action="#" method="POST">
+        <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST">
             @csrf
             @method('DELETE')
             

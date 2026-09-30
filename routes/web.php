@@ -19,8 +19,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/eod', [AdminController::class, 'eod'])->name('admin.eod');
         Route::post('/eod/{dailyRecap}/verify', [AdminController::class, 'verifyEod'])->name('admin.eod.verify');
         Route::get('/users/create', [AdminController::class, 'createUser'])->name('admin.users.create');
+        Route::post('/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
         Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('admin.users.edit');
         Route::get('/users/{user}/delete', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
+        Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('admin.users.destroy');
         Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
     });
 

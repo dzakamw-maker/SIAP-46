@@ -55,8 +55,8 @@
                     </td>
                     <td class="px-4 py-3">{{ $user->username }}</td>
                     <td class="px-4 py-3">
-                        <span class="{{ $user->role->name == 'Admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800' }} text-xs px-2.5 py-0.5 rounded">
-                            {{ $user->role->name }}
+                        <span class="{{ ($user->role?->name ?? '') == 'Admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800' }} text-xs px-2.5 py-0.5 rounded">
+                            {{ $user->role?->name ?? '-' }}
                         </span>
                     </td>
                     <td class="px-4 py-3">{{ $user->student_number ? $user->student_number . ' / ' . $user->class_group : '-' }}</td>
