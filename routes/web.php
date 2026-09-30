@@ -1,10 +1,13 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
-Route::post('/', [AuthController::class, 'login'])->middleware('guest');
+Route::get('/', [HomeController::class, 'index'])->name('home')->middleware('guest');
+
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
+Route::post('/login', [AuthController::class, 'login'])->middleware('guest');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
 use App\Http\Controllers\AdminController;
@@ -21,6 +24,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/users/create', [AdminController::class, 'createUser'])->name('admin.users.create');
         Route::post('/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
         Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('admin.users.edit');
+        Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('admin.users.update');
+        Route::match(['put', 'patch'], '/users/{user}/edit', [AdminController::class, 'updateUser']);
         Route::get('/users/{user}/delete', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
         Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('admin.users.destroy');
         Route::get('/users', [AdminController::class, 'users'])->name('admin.users');

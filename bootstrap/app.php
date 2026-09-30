@@ -18,9 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->redirectTo(
-            guests: '/',
+            guests: '/login',
             users: function (Request $request) {
-                return auth()->check() && auth()->user()->role->name === 'Admin'
+                return auth()->check() && (auth()->user()->role?->name === 'Admin' || auth()->user()->role?->name === 'Guru')
                     ? '/admin'
                     : '/kasir';
             }

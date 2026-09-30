@@ -71,11 +71,55 @@ class AdminController extends Controller
         return redirect()->route('admin.users')->with('success', 'User '.$validated['full_name'].' berhasil ditambahkan!');
     }
 
-    public function editUser(User $user)
+    public function editUser(User $user): View
     {
         $roles = Role::all();
 
         return view('admin.users-edit', compact('user', 'roles'));
+    }
+
+    public function updateUser(Request $request, User $user): RedirectResponse
+    {
+        $validated = $request->validate([
+            'full_name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255', 'unique:users,username,'.$user->id],
+            'role_id' => ['required', 'exists:roles,id'],
+            'student_number' => ['nullable', 'string', 'max:50'],
+            'class_group' => ['nullable', 'string', 'max:50'],
+            'password' => ['nullable', 'string', 'min:6'],
+            'is_active' => ['required', 'boolean'],
+        ], [
+            'full_name.required' => 'Nama lengkap wajib diisi.',
+            'username.required' => 'Username wajib diisi.',
+            'username.unique' => 'Username sudah digunakan, silakan pilih username lain.',
+            'role_id.required' => 'Role wajib dipilih.',
+            'role_id.exists' => 'Role yang dipilih tidak valid.',
+            'password.min' => 'Password minimal harus 6 karakter.',
+        ]);
+
+        // Cegah perubahan yang membahayakan jika user ini satu-satunya Admin tersisa
+        $user->loadMissing('role');
+        if ($user->role && $user->role->name === 'Admin') {
+            $totalAdmin = User::whereRelation('role', 'name', 'Admin')->count();
+            if ($totalAdmin <= 1) {
+                $adminRole = Role::where('name', 'Admin')->first();
+                if ($adminRole && (int) $request->role_id !== (int) $adminRole->id) {
+                    return back()->withErrors(['role_id' => 'Tidak dapat mengubah role karena user ini adalah satu-satunya Admin yang tersisa di sistem.'])->withInput();
+                }
+
+                if (! $request->boolean('is_active')) {
+                    return back()->withErrors(['is_active' => 'Tidak dapat menonaktifkan satu-satunya Admin yang tersisa di sistem.'])->withInput();
+                }
+            }
+        }
+
+        if (empty($validated['password'])) {
+            unset($validated['password']);
+        }
+
+        $user->update($validated);
+
+        return redirect()->route('admin.users')->with('success', 'Data user '.$user->full_name.' berhasil diperbarui!');
     }
 
     public function deleteUser(User $user): View|RedirectResponse

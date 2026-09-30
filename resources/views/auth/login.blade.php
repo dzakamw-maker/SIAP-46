@@ -14,7 +14,7 @@
             <p class="text-gray-500 text-sm mt-2">Silakan masuk menggunakan akun Anda</p>
         </div>
 
-        <form action="/" method="POST">
+        <form action="{{ route('login') }}" method="POST">
             @csrf
             
             @if($errors->any())
@@ -43,6 +43,13 @@
                 Masuk
             </button>
         </form>
+        
+        <div class="mt-6 pt-4 border-t border-gray-100 text-center">
+            <a href="{{ route('home') }}" class="text-sm font-medium text-teal-700 hover:text-teal-900 inline-flex items-center gap-1.5 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Kembali ke Beranda
+            </a>
+        </div>
         
     </div>
 </div>

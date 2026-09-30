@@ -220,4 +220,119 @@ class UserManagementTest extends TestCase
         $loginResponse->assertSessionHasErrors(['username']);
         $this->assertGuest();
     }
+
+    public function test_admin_can_view_edit_user_page(): void
+    {
+        $adminRole = Role::create(['name' => 'Admin']);
+        $admin = User::create([
+            'role_id' => $adminRole->id,
+            'full_name' => 'Admin User',
+            'username' => 'admin_test',
+            'password' => 'secret123',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.users.edit', $admin->id));
+
+        $response->assertStatus(200);
+        $response->assertSee('Edit Data User');
+        $response->assertSee('Admin User');
+    }
+
+    public function test_admin_can_update_user_without_changing_password(): void
+    {
+        $adminRole = Role::create(['name' => 'Admin']);
+        $admin = User::create([
+            'role_id' => $adminRole->id,
+            'full_name' => 'Admin Lama',
+            'username' => 'admin_lama',
+            'password' => 'passwordlama',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->put(route('admin.users.update', $admin->id), [
+            'full_name' => 'Admin Baru',
+            'username' => 'admin_lama', // same username
+            'role_id' => $adminRole->id,
+            'password' => '', // blank, do not change
+            'is_active' => '1',
+        ]);
+
+        $response->assertRedirect(route('admin.users'));
+        $response->assertSessionHas('success');
+
+        $admin->refresh();
+        $this->assertEquals('Admin Baru', $admin->full_name);
+        $this->assertTrue(Hash::check('passwordlama', $admin->password));
+    }
+
+    public function test_admin_can_update_user_and_change_password(): void
+    {
+        $adminRole = Role::create(['name' => 'Admin']);
+        $admin = User::create([
+            'role_id' => $adminRole->id,
+            'full_name' => 'Admin User',
+            'username' => 'admin_user',
+            'password' => 'passwordlama',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->put(route('admin.users.update', $admin->id), [
+            'full_name' => 'Admin User',
+            'username' => 'admin_user',
+            'role_id' => $adminRole->id,
+            'password' => 'passwordbaru123',
+            'is_active' => '1',
+        ]);
+
+        $response->assertRedirect(route('admin.users'));
+        $admin->refresh();
+        $this->assertTrue(Hash::check('passwordbaru123', $admin->password));
+    }
+
+    public function test_only_remaining_admin_cannot_be_demoted(): void
+    {
+        $adminRole = Role::create(['name' => 'Admin']);
+        $kasirRole = Role::create(['name' => 'Kasir']);
+
+        $onlyAdmin = User::create([
+            'role_id' => $adminRole->id,
+            'full_name' => 'Only Admin',
+            'username' => 'only_admin',
+            'password' => 'secret123',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($onlyAdmin)->put(route('admin.users.update', $onlyAdmin->id), [
+            'full_name' => 'Only Admin',
+            'username' => 'only_admin',
+            'role_id' => $kasirRole->id, // attempt to demote to kasir
+            'is_active' => '1',
+        ]);
+
+        $response->assertSessionHasErrors(['role_id']);
+    }
+
+    public function test_admin_can_update_user_via_edit_url(): void
+    {
+        $adminRole = Role::create(['name' => 'Admin']);
+        $admin = User::create([
+            'role_id' => $adminRole->id,
+            'full_name' => 'Admin Test',
+            'username' => 'admintest',
+            'password' => 'secret123',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->put('/admin/users/'.$admin->id.'/edit', [
+            'full_name' => 'Admin Test Updated',
+            'username' => 'admintest',
+            'role_id' => $adminRole->id,
+            'is_active' => '1',
+        ]);
+
+        $response->assertRedirect(route('admin.users'));
+        $admin->refresh();
+        $this->assertEquals('Admin Test Updated', $admin->full_name);
+    }
 }
