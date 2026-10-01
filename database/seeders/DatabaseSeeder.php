@@ -62,7 +62,7 @@ class DatabaseSeeder extends Seeder
             ];
         }, $types);
 
-        TransactionType::insert($typeData);
+        TransactionType::insertOrIgnore($typeData);
 
         $this->call(DummyDataSeeder::class);
     }
