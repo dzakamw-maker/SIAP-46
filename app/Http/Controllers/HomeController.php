@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 class HomeController extends Controller
 {
     /**
-     * Menampilkan halaman beranda (homepage) publik SIAP-46.
+     * Menampilkan halaman beranda (homepage) publik SIAP46.
      */
     public function index(): View
     {

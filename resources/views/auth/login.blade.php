@@ -10,7 +10,7 @@
         <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#005e6a] via-[#005e6a] to-[#f15a23]"></div>
 
         <div class="text-center mb-8">
-            <h2 class="text-3xl font-black text-slate-900 tracking-tight">SIAP<span class="text-[#f15a23]">-46</span></h2>
+            <h2 class="text-3xl font-black text-slate-900 tracking-tight">SIAP<span class="text-[#f15a23]">46</span></h2>
             <div class="inline-flex items-center gap-1.5 mt-2 px-3 py-0.5 rounded-full bg-[#005e6a]/10 text-[#005e6a] text-xs font-bold border border-[#005e6a]/20">
                 <span class="w-1.5 h-1.5 rounded-full bg-[#f15a23]"></span>
                 Mitra Resmi Agen BNI 46

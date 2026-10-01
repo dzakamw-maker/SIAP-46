@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'SIAP-46 | Platform Kasir & Mini Bank Mitra Agen BNI 46 Sekolah')
+@section('title', 'SIAP46 | Platform Kasir & Mini Bank Mitra Agen BNI 46 Sekolah')
 
 @section('content')
 <div class="min-h-screen flex flex-col bg-white text-slate-800 font-sans selection:bg-[#005e6a] selection:text-white antialiased">
@@ -30,7 +30,7 @@
                 
                 <!-- Logo Brand -->
                 <a href="{{ route('home') }}" class="flex items-center group">
-                    <span class="text-2xl font-black tracking-tight text-slate-900">SIAP<span class="text-[#f15a23]">-46</span></span>
+                    <span class="text-2xl font-black tracking-tight text-slate-900">SIAP<span class="text-[#f15a23]">46</span></span>
                 </a>
 
                 <!-- Centered Nav Links -->
@@ -647,7 +647,7 @@
             <div class="space-y-2">
                 <span class="text-xs font-bold uppercase tracking-wider text-[#005e6a] bg-white px-3 py-1 rounded-full border border-[#005e6a]/20">FAQ</span>
                 <h2 class="text-3xl font-black text-slate-900">Frequently Asked Questions</h2>
-                <p class="text-slate-600 text-sm">Pertanyaan umum seputar loket kemitraan Agen BNI 46 dan sistem SIAP-46.</p>
+                <p class="text-slate-600 text-sm">Pertanyaan umum seputar loket kemitraan Agen BNI 46 dan sistem SIAP46.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
@@ -710,13 +710,13 @@
                 
                 <div class="md:col-span-2 space-y-4">
                     <div>
-                        <span class="text-xl font-black text-white tracking-tight">SIAP<span class="text-[#f15a23]">-46</span></span>
+                        <span class="text-xl font-black text-white tracking-tight">SIAP<span class="text-[#f15a23]">46</span></span>
                     </div>
                     <p class="text-xs text-slate-300 leading-relaxed max-w-sm">
                         Sistem Informasi Administrasi & Transaksi Praktik Kasir Mitra Agen BNI 46 Sekolah. Memadukan kekokohan dan profesionalisme (<span class="text-[#008d9e] font-semibold">Teal #005e6a</span>) dengan semangat energi dan keterbukaan (<span class="text-[#f15a23] font-semibold">Oranye #f15a23</span>).
                     </p>
                     <div class="text-[11px] text-slate-500 pt-2">
-                        &copy; {{ date('Y') }} SIAP-46 • Kemitraan Agen46 PT Bank Negara Indonesia (Persero) Tbk.
+                        &copy; {{ date('Y') }} SIAP46 • Kemitraan Agen46 PT Bank Negara Indonesia (Persero) Tbk.
                     </div>
                 </div>
 
