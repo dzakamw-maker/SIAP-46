@@ -13,9 +13,9 @@ class CheckRole
      *
      * @param  Closure(Request): (Response)  $next
      */
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (! auth()->check() || auth()->user()->role->name !== $role) {
+        if (! auth()->check() || ! in_array(auth()->user()->role?->name, $roles, true)) {
             abort(403, 'Akses ditolak. Anda tidak memiliki izin untuk halaman ini.');
         }
 

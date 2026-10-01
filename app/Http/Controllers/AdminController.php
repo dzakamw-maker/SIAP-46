@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\DailyRecap;
 use App\Models\Role;
 use App\Models\StaffAttendance;
+use App\Models\StampDutyRecord;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -13,16 +14,74 @@ use Illuminate\View\View;
 
 class AdminController extends Controller
 {
-    public function dashboard()
+    public function dashboard(): View
     {
-        return view('admin.dashboard');
+        $today = today();
+
+        $todayTransactionsCount = Transaction::whereDate('transaction_date', $today)->count();
+        $todayTotalNominal = (float) Transaction::whereDate('transaction_date', $today)->sum('total_payment');
+
+        $latestBniRecap = DailyRecap::latest('recap_date')->first();
+        $latestBniBalance = (float) ($latestBniRecap?->bni_balance_remaining ?? 0);
+
+        $totalCashiersCount = User::whereRelation('role', 'name', 'Kasir')->where('is_active', true)->count();
+        $presentCashiersCount = StaffAttendance::whereDate('attendance_date', $today)->count();
+
+        $recentTransactions = Transaction::with(['customer', 'transactionType'])
+            ->latest('id')
+            ->limit(5)
+            ->get();
+
+        $todayAttendances = StaffAttendance::with('user')
+            ->whereDate('attendance_date', $today)
+            ->latest('id')
+            ->limit(5)
+            ->get();
+
+        return view('admin.dashboard', compact(
+            'todayTransactionsCount',
+            'todayTotalNominal',
+            'latestBniBalance',
+            'totalCashiersCount',
+            'presentCashiersCount',
+            'recentTransactions',
+            'todayAttendances'
+        ));
     }
 
-    public function transactions()
+    public function transactions(): View
     {
         $transactions = Transaction::with(['customer', 'cashier', 'transactionType'])->latest()->paginate(15);
 
         return view('admin.transactions', compact('transactions'));
+    }
+
+    public function destroyTransaction(Transaction $transaction): RedirectResponse
+    {
+        $isMaterai = str_contains(strtolower($transaction->transactionType?->code ?? ''), 'materai') || str_contains(strtolower($transaction->transactionType?->name ?? ''), 'materai');
+
+        if ($isMaterai) {
+            $latestStamp = StampDutyRecord::latest('id')->first();
+            $currentStock = $latestStamp ? $latestStamp->remaining_stock : 0;
+            StampDutyRecord::create([
+                'record_date' => today(),
+                'quantity_sold' => 0,
+                'quantity_purchased' => 1,
+                'remaining_stock' => $currentStock + 1,
+                'amount' => $transaction->amount,
+            ]);
+        }
+
+        $customer = $transaction->customer;
+        $trxNumber = $transaction->transaction_number;
+        $transaction->delete();
+
+        if ($customer && $customer->transactions()->count() === 0) {
+            $customer->delete();
+        }
+
+        return redirect()->route('admin.transactions')
+            ->with('success', "Transaksi #{$trxNumber} berhasil dihapus.");
     }
 
     public function attendance()

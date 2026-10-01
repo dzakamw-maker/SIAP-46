@@ -13,6 +13,13 @@ class Customer extends Model
 
     protected $guarded = [];
 
+    protected function casts(): array
+    {
+        return [
+            'is_default' => 'boolean',
+        ];
+    }
+
     public function transactionType(): BelongsTo
     {
         return $this->belongsTo(TransactionType::class);

@@ -18,6 +18,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->middleware('role:Admin')->group(function () {
         Route::get('/', [AdminController::class, 'dashboard'])->name('admin.dashboard');
         Route::get('/transactions', [AdminController::class, 'transactions'])->name('admin.transactions');
+        Route::delete('/transactions/{transaction}', [AdminController::class, 'destroyTransaction'])->name('admin.transactions.destroy');
         Route::get('/attendance', [AdminController::class, 'attendance'])->name('admin.attendance');
         Route::get('/eod', [AdminController::class, 'eod'])->name('admin.eod');
         Route::post('/eod/{dailyRecap}/verify', [AdminController::class, 'verifyEod'])->name('admin.eod.verify');
@@ -32,8 +33,11 @@ Route::middleware('auth')->group(function () {
     });
 
     // Cashier Routes
-    Route::prefix('kasir')->middleware('role:Kasir')->group(function () {
+    Route::prefix('kasir')->middleware('role:Kasir,Admin')->group(function () {
         Route::get('/', [CashierController::class, 'dashboard'])->name('kasir.dashboard');
+        Route::post('/transactions', [CashierController::class, 'storeTransaction'])->name('kasir.transactions.store');
+        Route::get('/customers/search', [CashierController::class, 'searchCustomers'])->name('kasir.customers.search');
+        Route::get('/customers/check-default', [CashierController::class, 'checkCustomerDefault'])->name('kasir.customers.check-default');
         Route::get('/stamps', [CashierController::class, 'stamps'])->name('kasir.stamps');
         Route::get('/eod', [CashierController::class, 'eod'])->name('kasir.eod');
     });
