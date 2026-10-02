@@ -58,18 +58,45 @@ class AdminController extends Controller
 
     public function destroyTransaction(Transaction $transaction): RedirectResponse
     {
-        $isMaterai = str_contains(strtolower($transaction->transactionType?->code ?? ''), 'materai') || str_contains(strtolower($transaction->transactionType?->name ?? ''), 'materai');
+        $isMaterai = $transaction->transactionType && (
+            str_contains(strtolower($transaction->transactionType->code), 'materai') ||
+            str_contains(strtolower($transaction->transactionType->code), 'mtr') ||
+            str_contains(strtolower($transaction->transactionType->name), 'materai')
+        );
 
         if ($isMaterai) {
-            $latestStamp = StampDutyRecord::latest('id')->first();
-            $currentStock = $latestStamp ? $latestStamp->remaining_stock : 0;
-            StampDutyRecord::create([
-                'record_date' => today(),
-                'quantity_sold' => 0,
-                'quantity_purchased' => 1,
-                'remaining_stock' => $currentStock + 1,
-                'amount' => $transaction->amount,
-            ]);
+            $relatedStamp = StampDutyRecord::whereDate('record_date', $transaction->transaction_date)
+                ->where('quantity_sold', '>', 0)
+                ->where('notes', 'like', '%Transaksi #'.$transaction->transaction_number.'%')
+                ->latest('id')
+                ->first();
+
+            $quantityToRestore = $relatedStamp ? (int) $relatedStamp->quantity_sold : 0;
+            if ($quantityToRestore <= 0) {
+                $quantityToRestore = (int) max(1, round($transaction->amount / 11000));
+            }
+
+            if ($relatedStamp) {
+                // Perbarui sisa stok pada record-record setelah record penjualan ini jika ada
+                StampDutyRecord::where('id', '>', $relatedStamp->id)
+                    ->increment('remaining_stock', $quantityToRestore);
+
+                // Hapus catatan penjualan materai yang terkait
+                $relatedStamp->delete();
+            } else {
+                // Fallback jika record penjualan lama tidak ditemukan
+                $latestStamp = StampDutyRecord::latest('id')->first();
+                $currentStock = $latestStamp ? (int) $latestStamp->remaining_stock : 0;
+                StampDutyRecord::create([
+                    'record_date' => today(),
+                    'quantity_sold' => 0,
+                    'quantity_purchased' => 0,
+                    'remaining_stock' => $currentStock + $quantityToRestore,
+                    'amount' => 0,
+                    'cashier_id' => auth()->id(),
+                    'notes' => "Pengembalian Stok (Pembatalan Transaksi #{$transaction->transaction_number} - {$quantityToRestore} pcs)",
+                ]);
+            }
         }
 
         $customer = $transaction->customer;

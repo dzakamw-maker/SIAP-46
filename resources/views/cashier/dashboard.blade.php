@@ -43,13 +43,19 @@
                     @csrf
                     <input type="hidden" name="is_default" id="is_default" value="">
                     
+                    @php
+                        $selectedTypeId = old('transaction_type_id', request('transaction_type_id', $types->first()?->id));
+                        $selectedTypeModel = $types->firstWhere('id', $selectedTypeId) ?? $types->first();
+                        $initialIsMaterai = $selectedTypeModel && (str_contains(strtolower($selectedTypeModel->code ?? ''), 'materai') || str_contains(strtolower($selectedTypeModel->code ?? ''), 'mtr') || str_contains(strtolower($selectedTypeModel->name ?? ''), 'materai'));
+                    @endphp
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <!-- Jenis Transaksi -->
-                        <div>
+                        <div id="transactionTypeWrapper" class="transition-all {{ $initialIsMaterai ? 'md:col-span-2' : '' }}">
                             <label for="transaction_type_id" class="block mb-2 text-sm font-medium text-gray-700">Jenis Transaksi</label>
                             <select name="transaction_type_id" id="transaction_type_id" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('transaction_type_id') border-red-500 @enderror" required>
                                 @foreach($types as $type)
-                                    <option value="{{ $type->id }}" data-code="{{ strtolower($type->code) }}" {{ old('transaction_type_id') == $type->id ? 'selected' : '' }}>
+                                    <option value="{{ $type->id }}" data-code="{{ strtolower($type->code) }}" {{ $selectedTypeId == $type->id ? 'selected' : '' }}>
                                         {{ $type->name }}
                                     </option>
                                 @endforeach
@@ -60,13 +66,13 @@
                         </div>
 
                         <!-- Identitas Customer -->
-                        <div class="relative">
+                        <div class="relative transition-all {{ $initialIsMaterai ? 'hidden' : '' }}" id="customerIdentifierWrapper">
                             <label for="customer_identifier" class="flex items-center mb-2 text-sm font-medium text-gray-700">
                                 <span>Identitas Customer</span>
                                 <span class="text-xs text-gray-400 font-normal ml-1">(No. Rek / No. HP / IDPEL)</span>
                                 <span id="defaultBadge" class="hidden ml-2 text-[10px] text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full font-medium">Default</span>
                             </label>
-                            <input type="text" name="customer_identifier" id="customer_identifier" value="{{ old('customer_identifier') }}" autocomplete="off" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('customer_identifier') border-red-500 @enderror" placeholder="Ketik nomor / cari identitas..." required>
+                            <input type="text" name="customer_identifier" id="customer_identifier" value="{{ old('customer_identifier') }}" autocomplete="off" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('customer_identifier') border-red-500 @enderror" placeholder="Ketik nomor / cari identitas..." {{ $initialIsMaterai ? '' : 'required' }}>
                             <div id="identifierSuggestions" class="absolute left-0 right-0 z-30 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 hidden max-h-48 overflow-y-auto divide-y divide-gray-100"></div>
                             @error('customer_identifier')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
@@ -84,19 +90,43 @@
                         @enderror
                     </div>
 
-                    <!-- Nominal Uang & Biaya Admin -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <!-- Regular: Nominal Uang & Biaya Admin -->
+                    <div id="regularAmountWrapper" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 {{ $initialIsMaterai ? 'hidden' : '' }}">
                         <div>
                             <label for="amount" class="block mb-2 text-sm font-medium text-gray-700">Nominal Uang (Rp)</label>
-                            <input type="number" name="amount" id="amount" value="{{ old('amount') }}" min="0" step="any" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('amount') border-red-500 @enderror" placeholder="0" required>
+                            <input type="number" name="amount" id="amount" value="{{ old('amount') }}" min="0" step="any" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('amount') border-red-500 @enderror" placeholder="0" {{ $initialIsMaterai ? '' : 'required' }}>
                             @error('amount')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
                         </div>
                         <div>
                             <label for="admin_fee" class="block mb-2 text-sm font-medium text-gray-700">Biaya Admin (Rp)</label>
-                            <input type="number" name="admin_fee" id="admin_fee" value="{{ old('admin_fee', 0) }}" min="0" step="any" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('admin_fee') border-red-500 @enderror" placeholder="0" required>
+                            <input type="number" name="admin_fee" id="admin_fee" value="{{ old('admin_fee') }}" min="0" step="any" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('admin_fee') border-red-500 @enderror" placeholder="0">
                             @error('admin_fee')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <!-- Materai: Jumlah Pembelian & Harga Satuan -->
+                    <div id="materaiAmountWrapper" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 {{ $initialIsMaterai ? '' : 'hidden' }}">
+                        <div>
+                            <label for="stamp_quantity" class="block mb-2 text-sm font-medium text-gray-700">
+                                <span>Jumlah Pembelian</span>
+                                <span class="text-xs text-gray-400 font-normal ml-1">(pcs)</span>
+                            </label>
+                            <input type="number" name="stamp_quantity" id="stamp_quantity" value="{{ old('stamp_quantity') }}" min="1" step="1" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('stamp_quantity') border-red-500 @enderror" placeholder="0" {{ $initialIsMaterai ? 'required' : '' }}>
+                            @error('stamp_quantity')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="stamp_price" class="block mb-2 text-sm font-medium text-gray-700">
+                                <span>Harga Jual per pcs (Rp)</span>
+                                <span class="text-xs text-orange-600 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded font-medium ml-1">Default Rp 11.000</span>
+                            </label>
+                            <input type="number" name="stamp_price" id="stamp_price" value="{{ old('stamp_price', 11000) }}" min="0" step="any" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('stamp_price') border-red-500 @enderror" placeholder="11000">
+                            @error('stamp_price')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
                         </div>
@@ -113,14 +143,14 @@
                         <div class="flex justify-between items-center">
                             <div>
                                 <span class="text-xs text-orange-700 uppercase tracking-wider font-semibold block">Total Pembayaran Customer</span>
-                                <span class="text-xs text-gray-500 font-normal">(Nominal + Biaya Admin)</span>
+                                <span id="totalSubtitle" class="text-xs text-gray-500 font-normal">{{ $initialIsMaterai ? '(Jumlah Pembelian × Harga Satuan)' : '(Nominal + Biaya Admin)' }}</span>
                             </div>
                             <span id="totalDisplay" class="text-2xl font-black text-orange-600">Rp 0</span>
                         </div>
                     </div>
 
                     <div class="flex justify-end space-x-3">
-                        <button type="reset" onclick="setTimeout(updateTotal, 50)" class="text-gray-600 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 transition-colors">
+                        <button type="reset" onclick="setTimeout(() => { updateTotal(); syncTransactionType(); }, 50)" class="text-gray-600 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 transition-colors">
                             Batal
                         </button>
                         <button type="submit" class="text-white bg-orange-600 hover:bg-orange-700 focus:ring-4 focus:outline-none focus:ring-orange-300 font-medium rounded-lg text-sm px-6 py-2.5 shadow-sm transition-all hover:scale-[1.01]">
@@ -220,23 +250,68 @@
 </div>
 
 <script>
-    // 1. Kalkulasi Live Total Pembayaran
+    // 1. Elemen DOM Utama
+    const typeSelect = document.getElementById('transaction_type_id');
+    const identWrapper = document.getElementById('customerIdentifierWrapper');
+    const typeWrapper = document.getElementById('transactionTypeWrapper');
+    const identInput = document.getElementById('customer_identifier');
+    const nameInput = document.getElementById('customer_name');
     const amountInput = document.getElementById('amount');
     const adminFeeInput = document.getElementById('admin_fee');
+    const stampQtyInput = document.getElementById('stamp_quantity');
+    const stampPriceInput = document.getElementById('stamp_price');
+    const regularAmountWrapper = document.getElementById('regularAmountWrapper');
+    const materaiAmountWrapper = document.getElementById('materaiAmountWrapper');
     const totalDisplay = document.getElementById('totalDisplay');
+    const totalSubtitle = document.getElementById('totalSubtitle');
 
+    function checkIsMaterai(option) {
+        if (!option) return false;
+        const code = (option.getAttribute('data-code') || '').toLowerCase();
+        const text = (option.textContent || option.innerText || '').toLowerCase();
+        return code.includes('materai') || code.includes('mtr') || text.includes('materai');
+    }
+
+    // 2. Kalkulasi Live Total Pembayaran
     function updateTotal() {
-        const amount = parseFloat(amountInput.value) || 0;
-        const fee = parseFloat(adminFeeInput.value) || 0;
-        const total = amount + fee;
-        totalDisplay.textContent = 'Rp ' + total.toLocaleString('id-ID');
+        const selectedOption = typeSelect ? typeSelect.options[typeSelect.selectedIndex] : null;
+        const isMaterai = checkIsMaterai(selectedOption);
+
+        if (isMaterai) {
+            const qty = parseFloat(stampQtyInput ? stampQtyInput.value : 0) || 0;
+            const price = parseFloat(stampPriceInput ? stampPriceInput.value : 0) || 0;
+            const total = qty * price;
+            totalDisplay.textContent = 'Rp ' + total.toLocaleString('id-ID');
+            if (totalSubtitle) {
+                totalSubtitle.textContent = '(Jumlah Pembelian × Harga Satuan)';
+            }
+            if (amountInput) {
+                amountInput.value = total > 0 ? total : '';
+            }
+            if (adminFeeInput) {
+                adminFeeInput.value = '';
+            }
+        } else {
+            const amount = parseFloat(amountInput.value) || 0;
+            const fee = parseFloat(adminFeeInput.value) || 0;
+            const total = amount + fee;
+            totalDisplay.textContent = 'Rp ' + total.toLocaleString('id-ID');
+            if (totalSubtitle) {
+                totalSubtitle.textContent = '(Nominal + Biaya Admin)';
+            }
+        }
     }
 
     amountInput.addEventListener('input', updateTotal);
     adminFeeInput.addEventListener('input', updateTotal);
-    updateTotal();
+    if (stampQtyInput) {
+        stampQtyInput.addEventListener('input', updateTotal);
+    }
+    if (stampPriceInput) {
+        stampPriceInput.addEventListener('input', updateTotal);
+    }
 
-    // 2. Autocomplete Suggestion Identitas & Nama Customer
+    // 3. Autocomplete Suggestion Identitas & Nama Customer
     const searchUrl = "{{ route('kasir.customers.search') }}";
     let searchTimer = null;
 
@@ -291,14 +366,12 @@
         }, 200);
     }
 
-    const identInput = document.getElementById('customer_identifier');
     identInput.addEventListener('input', (e) => {
         document.getElementById('is_default').value = '';
         document.getElementById('defaultBadge').classList.add('hidden');
         fetchSuggestions(e.target.value, 'identifier');
     });
 
-    const nameInput = document.getElementById('customer_name');
     nameInput.addEventListener('input', (e) => {
         document.getElementById('is_default').value = '';
         document.getElementById('defaultBadge').classList.add('hidden');
@@ -315,14 +388,46 @@
         }
     });
 
-    document.getElementById('transaction_type_id').addEventListener('change', () => {
+    // 4. Toggle Tampilan Jenis Transaksi (Materai vs Reguler)
+    function syncTransactionType() {
+        const selectedOption = typeSelect.options[typeSelect.selectedIndex];
+        const isMaterai = checkIsMaterai(selectedOption);
+
+        if (isMaterai) {
+            identWrapper.classList.add('hidden');
+            typeWrapper.classList.add('md:col-span-2');
+            identInput.removeAttribute('required');
+            identInput.value = '';
+
+            if (regularAmountWrapper) regularAmountWrapper.classList.add('hidden');
+            if (materaiAmountWrapper) materaiAmountWrapper.classList.remove('hidden');
+
+            amountInput.removeAttribute('required');
+            if (stampQtyInput) stampQtyInput.setAttribute('required', 'required');
+        } else {
+            identWrapper.classList.remove('hidden');
+            typeWrapper.classList.remove('md:col-span-2');
+            identInput.setAttribute('required', 'required');
+
+            if (regularAmountWrapper) regularAmountWrapper.classList.remove('hidden');
+            if (materaiAmountWrapper) materaiAmountWrapper.classList.add('hidden');
+
+            amountInput.setAttribute('required', 'required');
+            if (stampQtyInput) stampQtyInput.removeAttribute('required');
+        }
+
         document.getElementById('is_default').value = '';
         document.getElementById('defaultBadge').classList.add('hidden');
         document.getElementById('identifierSuggestions').classList.add('hidden');
         document.getElementById('nameSuggestions').classList.add('hidden');
-    });
 
-    // 3. Validasi Form & Verifikasi Identitas Default
+        updateTotal();
+    }
+
+    typeSelect.addEventListener('change', syncTransactionType);
+    syncTransactionType();
+
+    // 5. Validasi Form & Verifikasi Identitas Default
     const checkDefaultUrl = "{{ route('kasir.customers.check-default') }}";
     let isSubmitting = false;
 
@@ -331,15 +436,35 @@
             return true;
         }
 
-        const typeSelect = document.getElementById('transaction_type_id');
         const selectedOption = typeSelect.options[typeSelect.selectedIndex];
-        const typeCode = (selectedOption.getAttribute('data-code') || '').toLowerCase();
+        const isMaterai = checkIsMaterai(selectedOption);
         const stampsStock = {{ $stampsStock }};
 
-        if ((typeCode === 'materai' || typeCode === 'mtr') && stampsStock <= 0) {
-            alert('Transaksi tidak dapat diproses: Stok materai habis! Silakan lakukan restock terlebih dahulu.');
-            event.preventDefault();
-            return false;
+        if (isMaterai) {
+            const qty = parseInt(stampQtyInput ? stampQtyInput.value : 0, 10) || 0;
+            if (qty <= 0) {
+                alert('Silakan masukkan jumlah pembelian materai (minimal 1 pcs).');
+                if (stampQtyInput) stampQtyInput.focus();
+                event.preventDefault();
+                return false;
+            }
+
+            if (stampsStock <= 0) {
+                alert('Transaksi tidak dapat diproses: Stok materai habis! Silakan lakukan restock terlebih dahulu.');
+                event.preventDefault();
+                return false;
+            }
+
+            if (qty > stampsStock) {
+                alert(`Transaksi tidak dapat diproses: Stok materai tidak mencukupi! Sisa stok saat ini: ${stampsStock} pcs, jumlah diminta: ${qty} pcs.`);
+                if (stampQtyInput) stampQtyInput.focus();
+                event.preventDefault();
+                return false;
+            }
+
+            updateTotal();
+            isSubmitting = true;
+            return true;
         }
 
         const defaultVal = document.getElementById('is_default').value;
@@ -350,7 +475,7 @@
         event.preventDefault();
 
         const typeId = typeSelect.value;
-        const ident = document.getElementById('customer_identifier').value.trim();
+        const ident = identInput.value.trim();
         const name = document.getElementById('customer_name').value.trim();
 
         if (!typeId || !ident || !name) {

@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/customers/search', [CashierController::class, 'searchCustomers'])->name('kasir.customers.search');
         Route::get('/customers/check-default', [CashierController::class, 'checkCustomerDefault'])->name('kasir.customers.check-default');
         Route::get('/stamps', [CashierController::class, 'stamps'])->name('kasir.stamps');
+        Route::post('/stamps', [CashierController::class, 'storeStamp'])->name('kasir.stamps.store');
         Route::get('/eod', [CashierController::class, 'eod'])->name('kasir.eod');
     });
 });

@@ -437,4 +437,355 @@ class CashierTransactionTest extends TestCase
             'customer_identifier' => '22222222',
         ]);
     }
+
+    public function test_cashier_can_view_stamps_page(): void
+    {
+        $cashier = $this->createCashierUser();
+
+        StampDutyRecord::create([
+            'record_date' => today(),
+            'quantity_sold' => 0,
+            'quantity_purchased' => 25,
+            'remaining_stock' => 25,
+            'amount' => 250000,
+            'cashier_id' => $cashier->id,
+            'notes' => 'Restock awal',
+        ]);
+
+        $response = $this->actingAs($cashier)->get(route('kasir.stamps'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Restock Materai');
+        $response->assertSee('25');
+        $response->assertSee('Restock awal');
+    }
+
+    public function test_cashier_can_restock_stamps_successfully(): void
+    {
+        $cashier = $this->createCashierUser();
+
+        // Previous stock 10
+        StampDutyRecord::create([
+            'record_date' => today(),
+            'quantity_sold' => 0,
+            'quantity_purchased' => 10,
+            'remaining_stock' => 10,
+            'amount' => 100000,
+            'cashier_id' => $cashier->id,
+        ]);
+
+        $response = $this->actingAs($cashier)->post(route('kasir.stamps.store'), [
+            'record_date' => today()->format('Y-m-d'),
+            'quantity_purchased' => 50,
+            'amount' => 500000,
+            'notes' => 'Beli dari kantor pos pusat',
+        ]);
+
+        $response->assertRedirect(route('kasir.stamps'));
+        $response->assertSessionHas('success');
+
+        $latestRecord = StampDutyRecord::latest('id')->first();
+        $this->assertEquals(60, $latestRecord->remaining_stock);
+        $this->assertEquals(50, $latestRecord->quantity_purchased);
+        $this->assertEquals(0, $latestRecord->quantity_sold);
+        $this->assertEquals('Beli dari kantor pos pusat', $latestRecord->notes);
+        $this->assertEquals($cashier->id, $latestRecord->cashier_id);
+    }
+
+    public function test_cashier_restock_stamps_validation_errors(): void
+    {
+        $cashier = $this->createCashierUser();
+
+        $response = $this->actingAs($cashier)->post(route('kasir.stamps.store'), [
+            'record_date' => '',
+            'quantity_purchased' => 0,
+            'amount' => -1000,
+        ]);
+
+        $response->assertSessionHasErrors(['record_date', 'quantity_purchased', 'amount']);
+    }
+
+    public function test_materai_transaction_without_customer_identifier_succeeds_and_generates_identifier(): void
+    {
+        $cashier = $this->createCashierUser();
+        $type = TransactionType::firstOrCreate(
+            ['code' => 'materai'],
+            ['name' => 'Materai', 'is_active' => true]
+        );
+
+        StampDutyRecord::create([
+            'record_date' => today(),
+            'quantity_sold' => 0,
+            'quantity_purchased' => 5,
+            'remaining_stock' => 5,
+            'amount' => 50000,
+        ]);
+
+        $response = $this->actingAs($cashier)->post(route('kasir.transactions.store'), [
+            'transaction_type_id' => $type->id,
+            'customer_name' => 'Pembeli Materai Langsung',
+            'amount' => 10000,
+            // customer_identifier & admin_fee omitted
+        ]);
+
+        $response->assertRedirect(route('kasir.dashboard'));
+        $response->assertSessionHas('success');
+
+        $transaction = Transaction::latest('id')->first();
+        $this->assertEquals(0, $transaction->admin_fee);
+        $this->assertEquals(10000, $transaction->total_payment);
+        $this->assertStringStartsWith('MTR-', $transaction->customer->customer_identifier);
+        $this->assertEquals('Pembeli Materai Langsung', $transaction->customer->customer_name);
+    }
+
+    public function test_non_materai_transaction_requires_customer_identifier(): void
+    {
+        $cashier = $this->createCashierUser();
+        $type = TransactionType::firstOrCreate(
+            ['code' => 'pln_prepaid'],
+            ['name' => 'PLN- PREPAID', 'is_active' => true]
+        );
+
+        $response = $this->actingAs($cashier)->post(route('kasir.transactions.store'), [
+            'transaction_type_id' => $type->id,
+            'customer_name' => 'Pelanggan PLN',
+            'amount' => 50000,
+            // customer_identifier omitted
+        ]);
+
+        $response->assertSessionHasErrors(['customer_identifier']);
+    }
+
+    public function test_transaction_with_omitted_admin_fee_defaults_to_zero(): void
+    {
+        $cashier = $this->createCashierUser();
+        $type = TransactionType::firstOrCreate(
+            ['code' => 'topup_dana'],
+            ['name' => 'TOPUP-DANA', 'is_active' => true]
+        );
+
+        $response = $this->actingAs($cashier)->post(route('kasir.transactions.store'), [
+            'transaction_type_id' => $type->id,
+            'customer_identifier' => '081234567890',
+            'customer_name' => 'Pelanggan Dana',
+            'amount' => 20000,
+            // admin_fee omitted
+        ]);
+
+        $response->assertRedirect(route('kasir.dashboard'));
+        $transaction = Transaction::latest('id')->first();
+        $this->assertEquals(0, $transaction->admin_fee);
+        $this->assertEquals(20000, $transaction->total_payment);
+    }
+
+    public function test_materai_transaction_with_quantity_and_default_price(): void
+    {
+        $cashier = $this->createCashierUser();
+        $type = TransactionType::firstOrCreate(
+            ['code' => 'materai'],
+            ['name' => 'Materai', 'is_active' => true]
+        );
+
+        StampDutyRecord::create([
+            'record_date' => today(),
+            'quantity_sold' => 0,
+            'quantity_purchased' => 10,
+            'remaining_stock' => 10,
+            'amount' => 100000,
+        ]);
+
+        $response = $this->actingAs($cashier)->post(route('kasir.transactions.store'), [
+            'transaction_type_id' => $type->id,
+            'customer_name' => 'Pembeli 3 Materai',
+            'stamp_quantity' => 3,
+            // stamp_price omitted -> defaults to 11.000
+        ]);
+
+        $response->assertRedirect(route('kasir.dashboard'));
+        $response->assertSessionHas('success');
+
+        $transaction = Transaction::latest('id')->first();
+        $this->assertEquals(0, $transaction->admin_fee);
+        $this->assertEquals(33000, $transaction->amount);
+        $this->assertEquals(33000, $transaction->total_payment);
+
+        $stampRecord = StampDutyRecord::latest('id')->first();
+        $this->assertEquals(3, $stampRecord->quantity_sold);
+        $this->assertEquals(7, $stampRecord->remaining_stock);
+        $this->assertEquals(33000, $stampRecord->amount);
+    }
+
+    public function test_materai_transaction_with_custom_price(): void
+    {
+        $cashier = $this->createCashierUser();
+        $type = TransactionType::firstOrCreate(
+            ['code' => 'materai'],
+            ['name' => 'Materai', 'is_active' => true]
+        );
+
+        StampDutyRecord::create([
+            'record_date' => today(),
+            'quantity_sold' => 0,
+            'quantity_purchased' => 5,
+            'remaining_stock' => 5,
+            'amount' => 50000,
+        ]);
+
+        $response = $this->actingAs($cashier)->post(route('kasir.transactions.store'), [
+            'transaction_type_id' => $type->id,
+            'customer_name' => 'Pembeli Materai Khusus',
+            'stamp_quantity' => 2,
+            'stamp_price' => 12000,
+        ]);
+
+        $response->assertRedirect(route('kasir.dashboard'));
+        $transaction = Transaction::latest('id')->first();
+        $this->assertEquals(24000, $transaction->amount);
+        $this->assertEquals(24000, $transaction->total_payment);
+
+        $stampRecord = StampDutyRecord::latest('id')->first();
+        $this->assertEquals(2, $stampRecord->quantity_sold);
+        $this->assertEquals(3, $stampRecord->remaining_stock);
+    }
+
+    public function test_materai_transaction_insufficient_stock_returns_error(): void
+    {
+        $cashier = $this->createCashierUser();
+        $type = TransactionType::firstOrCreate(
+            ['code' => 'materai'],
+            ['name' => 'Materai', 'is_active' => true]
+        );
+
+        StampDutyRecord::create([
+            'record_date' => today(),
+            'quantity_sold' => 0,
+            'quantity_purchased' => 2,
+            'remaining_stock' => 2,
+            'amount' => 20000,
+        ]);
+
+        $response = $this->actingAs($cashier)->post(route('kasir.transactions.store'), [
+            'transaction_type_id' => $type->id,
+            'customer_name' => 'Beli Melebihi Stok',
+            'stamp_quantity' => 5,
+        ]);
+
+        $response->assertSessionHasErrors(['stamp_quantity']);
+    }
+
+    public function test_dashboard_renders_materai_inputs_and_admin_fee_placeholder(): void
+    {
+        $cashier = $this->createCashierUser();
+        $type = TransactionType::firstOrCreate(
+            ['code' => 'materai'],
+            ['name' => 'Materai', 'is_active' => true]
+        );
+
+        $response = $this->actingAs($cashier)->get(route('kasir.dashboard', ['transaction_type_id' => $type->id]));
+
+        $response->assertStatus(200);
+        $response->assertSee('name="stamp_quantity"', false);
+        $response->assertSee('placeholder="0"', false);
+        $response->assertSee('name="stamp_price"', false);
+        $response->assertSee('value="11000"', false);
+        $response->assertSee('Default Rp 11.000', false);
+    }
+
+    public function test_admin_deleting_materai_transaction_restores_exact_stock_not_just_one(): void
+    {
+        $cashier = $this->createCashierUser();
+        $admin = User::create([
+            'role_id' => Role::firstOrCreate(['name' => 'Admin'])->id,
+            'full_name' => 'Admin Sekolah',
+            'username' => 'admin_test_delete',
+            'password' => 'secret123',
+            'is_active' => true,
+        ]);
+
+        $type = TransactionType::firstOrCreate(
+            ['code' => 'materai'],
+            ['name' => 'Materai', 'is_active' => true]
+        );
+
+        // 1. Restock 50 pcs materai
+        StampDutyRecord::create([
+            'record_date' => today(),
+            'quantity_sold' => 0,
+            'quantity_purchased' => 50,
+            'remaining_stock' => 50,
+            'amount' => 500000,
+            'cashier_id' => $cashier->id,
+            'notes' => 'Restock 50 pcs',
+        ]);
+
+        // 2. Beli 10 pcs materai
+        $this->actingAs($cashier)->post(route('kasir.transactions.store'), [
+            'transaction_type_id' => $type->id,
+            'customer_name' => 'Pembeli 10 Materai',
+            'stamp_quantity' => 10,
+            'stamp_price' => 11000,
+        ]);
+
+        // Sisa stok saat ini harus 40 pcs
+        $this->assertEquals(40, StampDutyRecord::latest('id')->value('remaining_stock'));
+        $transaction = Transaction::latest('id')->first();
+        $this->assertEquals(110000, $transaction->amount);
+
+        // 3. Admin menghapus transaksi tersebut
+        $deleteResponse = $this->actingAs($admin)->delete(route('admin.transactions.destroy', $transaction->id));
+        $deleteResponse->assertRedirect(route('admin.transactions'));
+        $deleteResponse->assertSessionHas('success');
+
+        // Transaksi harus sudah terhapus
+        $this->assertNull(Transaction::find($transaction->id));
+
+        // Sisa stok materai HARUS kembali ke 50 pcs (bukan 41 pcs!)
+        $this->assertEquals(50, StampDutyRecord::latest('id')->value('remaining_stock'));
+    }
+
+    public function test_cashier_dashboard_auto_reconciles_legacy_buggy_delete_records(): void
+    {
+        $cashier = $this->createCashierUser();
+
+        // 1. Record restock 50
+        StampDutyRecord::create([
+            'record_date' => today(),
+            'quantity_sold' => 0,
+            'quantity_purchased' => 50,
+            'remaining_stock' => 50,
+            'amount' => 500000,
+            'notes' => 'Restock Awal',
+        ]);
+
+        // 2. Record penjualan 10 pcs yang transaksinya sudah terhapus
+        StampDutyRecord::create([
+            'record_date' => today(),
+            'quantity_sold' => 10,
+            'quantity_purchased' => 0,
+            'remaining_stock' => 40,
+            'amount' => 110000,
+            'notes' => 'Penjualan Materai 10 pcs @ Rp 11.000 (Transaksi #99999)',
+        ]);
+
+        // 3. Record cacat bug versi lama (+1 padahal pembelian 10 pcs)
+        StampDutyRecord::create([
+            'record_date' => today(),
+            'quantity_sold' => 0,
+            'quantity_purchased' => 1,
+            'remaining_stock' => 41,
+            'amount' => 110000,
+            'notes' => null, // notes null khas bug lama
+        ]);
+
+        // Sebelum dibuka, sisa stok salah di angka 41
+        $this->assertEquals(41, StampDutyRecord::latest('id')->value('remaining_stock'));
+
+        // Kasir membuka dashboard
+        $response = $this->actingAs($cashier)->get(route('kasir.dashboard'));
+        $response->assertStatus(200);
+
+        // Sisa stok otomatis terekonsiliasi kembali menjadi 50 pcs!
+        $this->assertEquals(50, StampDutyRecord::latest('id')->value('remaining_stock'));
+        $response->assertSee('50');
+    }
 }
