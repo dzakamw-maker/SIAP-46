@@ -788,4 +788,90 @@ class CashierTransactionTest extends TestCase
         $this->assertEquals(50, StampDutyRecord::latest('id')->value('remaining_stock'));
         $response->assertSee('50');
     }
+
+    public function test_cashier_dashboard_ensures_bayar_spp_transaction_type_exists(): void
+    {
+        $cashier = $this->createCashierUser();
+
+        // Pastikan belum ada 'bayar_spp'
+        TransactionType::where('code', 'bayar_spp')->delete();
+        $this->assertDatabaseMissing('transaction_types', ['code' => 'bayar_spp']);
+
+        // Kasir mengakses dashboard
+        $response = $this->actingAs($cashier)->get(route('kasir.dashboard'));
+        $response->assertStatus(200);
+
+        // 'bayar_spp' harus otomatis terbuat dan tampil di halaman
+        $this->assertDatabaseHas('transaction_types', [
+            'code' => 'bayar_spp',
+            'name' => 'Bayar SPP',
+            'is_active' => true,
+        ]);
+        $response->assertSee('Bayar SPP');
+    }
+
+    public function test_cashier_can_process_bayar_spp_transaction_with_auto_prefix(): void
+    {
+        $cashier = $this->createCashierUser();
+        $sppType = TransactionType::firstOrCreate(
+            ['code' => 'bayar_spp'],
+            ['name' => 'Bayar SPP', 'is_active' => true]
+        );
+
+        // Kasir menginput NIS '12511177' di form samping label '98844565'
+        $response = $this->actingAs($cashier)->post(route('kasir.transactions.store'), [
+            'transaction_type_id' => $sppType->id,
+            'customer_identifier' => '12511177', // Hanya NIS
+            'customer_name' => 'Muhammad Rizky (XI RPL 1)',
+            'amount' => 250000,
+            'admin_fee' => 0,
+            'notes' => 'SPP Bulan Oktober 2026',
+        ]);
+
+        $response->assertRedirect(route('kasir.dashboard'));
+        $response->assertSessionHas('success');
+
+        // Customer (Siswa) tersimpan dengan identitas lengkap 9884456512511177
+        $this->assertDatabaseHas('customers', [
+            'transaction_type_id' => $sppType->id,
+            'customer_identifier' => '9884456512511177',
+            'customer_name' => 'Muhammad Rizky (XI RPL 1)',
+        ]);
+
+        // Transaksi tersimpan
+        $this->assertDatabaseHas('transactions', [
+            'transaction_type_id' => $sppType->id,
+            'amount' => 250000,
+            'admin_fee' => 0,
+            'total_payment' => 250000,
+            'cashier_id' => $cashier->id,
+            'notes' => 'SPP Bulan Oktober 2026',
+        ]);
+    }
+
+    public function test_bayar_spp_does_not_duplicate_prefix_if_already_present(): void
+    {
+        $cashier = $this->createCashierUser();
+        $sppType = TransactionType::firstOrCreate(
+            ['code' => 'bayar_spp'],
+            ['name' => 'Bayar SPP', 'is_active' => true]
+        );
+
+        // Jika dikirim sudah dengan prefix 9884456512511177
+        $response = $this->actingAs($cashier)->post(route('kasir.transactions.store'), [
+            'transaction_type_id' => $sppType->id,
+            'customer_identifier' => '9884456512511177',
+            'customer_name' => 'Fajar Pratama (XI RPL 2)',
+            'amount' => 250000,
+            'admin_fee' => 0,
+        ]);
+
+        $response->assertRedirect(route('kasir.dashboard'));
+
+        // Tidak boleh menjadi 9884456598844565...
+        $this->assertDatabaseHas('customers', [
+            'transaction_type_id' => $sppType->id,
+            'customer_identifier' => '9884456512511177',
+        ]);
+    }
 }

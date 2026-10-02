@@ -17,6 +17,7 @@ class CashierController extends Controller
     public function dashboard(): View
     {
         $this->reconcileStampsStockIfNeeded();
+        $this->ensureDefaultTransactionTypesExist();
 
         $types = TransactionType::where('is_active', true)->get();
         $stampsStock = StampDutyRecord::latest('id')->value('remaining_stock') ?? 0;
@@ -65,6 +66,16 @@ class CashierController extends Controller
             ]);
         }
 
+        $selectedType = TransactionType::find($typeId);
+        $isSpp = $selectedType && (
+            str_contains(strtolower($selectedType->code), 'spp') ||
+            str_contains(strtolower($selectedType->name), 'spp')
+        );
+
+        if ($isSpp && $identifier !== '' && ! str_starts_with($identifier, '98844565')) {
+            $identifier = '98844565'.$identifier;
+        }
+
         $defaultCustomer = Customer::where('transaction_type_id', $typeId)
             ->where('is_default', true)
             ->where(function ($q) use ($name) {
@@ -96,6 +107,10 @@ class CashierController extends Controller
             in_array(strtolower($selectedType->code), ['materai', 'mtr'], true) ||
             str_contains(strtolower($selectedType->code), 'materai') ||
             str_contains(strtolower($selectedType->name), 'materai')
+        );
+        $isSpp = $selectedType && (
+            str_contains(strtolower($selectedType->code), 'spp') ||
+            str_contains(strtolower($selectedType->name), 'spp')
         );
 
         $rules = [
@@ -153,6 +168,10 @@ class CashierController extends Controller
 
         $customerName = trim($validated['customer_name']);
         $customerIdent = trim((string) ($validated['customer_identifier'] ?? ''));
+
+        if ($isSpp && $customerIdent !== '' && ! str_starts_with($customerIdent, '98844565')) {
+            $customerIdent = '98844565'.$customerIdent;
+        }
 
         if ($isMaterai && $customerIdent === '') {
             $customerIdent = 'MTR-'.now()->format('YmdHis').'-'.strtoupper(Str::random(4));
@@ -330,5 +349,16 @@ class CashierController extends Controller
                 }
             }
         }
+    }
+
+    /**
+     * Pastikan jenis transaksi default seperti Bayar SPP tersedia di database.
+     */
+    private function ensureDefaultTransactionTypesExist(): void
+    {
+        TransactionType::firstOrCreate(
+            ['code' => 'bayar_spp'],
+            ['name' => 'Bayar SPP', 'is_active' => true]
+        );
     }
 }

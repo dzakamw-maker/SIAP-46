@@ -77,6 +77,7 @@ class DummyDataSeeder extends Seeder
         $topupGopay = TransactionType::firstOrCreate(['code' => 'topup_gopay'], ['name' => 'TOPUP- GOPAY', 'is_active' => true]);
         $bpjs = TransactionType::firstOrCreate(['code' => 'bpjs'], ['name' => 'BPJS', 'is_active' => true]);
         $materai = TransactionType::firstOrCreate(['code' => 'materai'], ['name' => 'Materai', 'is_active' => true]);
+        $bayarSpp = TransactionType::firstOrCreate(['code' => 'bayar_spp'], ['name' => 'Bayar SPP', 'is_active' => true]);
 
         // 3. Nasabah (Customers)
         $customersData = [
@@ -90,6 +91,7 @@ class DummyDataSeeder extends Seeder
             ['type' => $topupGopay, 'identifier' => '087855443322', 'name' => 'Maya Tri Lestari'],
             ['type' => $bpjs, 'identifier' => '0001234567890', 'name' => 'Supriyadi'],
             ['type' => $materai, 'identifier' => 'CASH-001', 'name' => 'Warga / Pembeli Materai'],
+            ['type' => $bayarSpp, 'identifier' => '9884456512511177', 'name' => 'Fajar Pratama (Siswa)'],
         ];
 
         $customers = [];

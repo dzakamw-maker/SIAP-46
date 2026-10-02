@@ -49,7 +49,7 @@ class DatabaseSeeder extends Seeder
         $types = [
             'Setor Tunai BNI', 'Setor Tunai Antar Bank', 'PULSA- INDOSAT', 'PULSA-TSEL',
             'PULSA-XL', 'PULSA- 3', 'PLN- PREPAID', 'PLN', 'BPJS', 'TOPUP- GOPAY',
-            'TOPUP- SPAY', 'TOPUP-DANA', 'TELKOM', 'PDAM', 'Tarik Tunai', 'Tagihan Telepon', 'Materai',
+            'TOPUP- SPAY', 'TOPUP-DANA', 'TELKOM', 'PDAM', 'Tarik Tunai', 'Tagihan Telepon', 'Materai', 'Bayar SPP',
         ];
 
         $typeData = array_map(function ($t) {

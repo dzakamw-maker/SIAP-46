@@ -47,6 +47,7 @@
                         $selectedTypeId = old('transaction_type_id', request('transaction_type_id', $types->first()?->id));
                         $selectedTypeModel = $types->firstWhere('id', $selectedTypeId) ?? $types->first();
                         $initialIsMaterai = $selectedTypeModel && (str_contains(strtolower($selectedTypeModel->code ?? ''), 'materai') || str_contains(strtolower($selectedTypeModel->code ?? ''), 'mtr') || str_contains(strtolower($selectedTypeModel->name ?? ''), 'materai'));
+                        $initialIsSpp = $selectedTypeModel && (str_contains(strtolower($selectedTypeModel->code ?? ''), 'spp') || str_contains(strtolower($selectedTypeModel->name ?? ''), 'spp'));
                     @endphp
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -68,11 +69,25 @@
                         <!-- Identitas Customer -->
                         <div class="relative transition-all {{ $initialIsMaterai ? 'hidden' : '' }}" id="customerIdentifierWrapper">
                             <label for="customer_identifier" class="flex items-center mb-2 text-sm font-medium text-gray-700">
-                                <span>Identitas Customer</span>
-                                <span class="text-xs text-gray-400 font-normal ml-1">(No. Rek / No. HP / IDPEL)</span>
+                                <span id="identifierTitle">{{ $initialIsSpp ? 'Identitas Siswa (NIS/NISN)' : 'Identitas Customer' }}</span>
+                                <span class="text-xs text-gray-400 font-normal ml-1" id="identifierHint">{{ $initialIsSpp ? '(Nomor VA: 98844565 + NIS)' : '(No. Rek / No. HP / IDPEL)' }}</span>
                                 <span id="defaultBadge" class="hidden ml-2 text-[10px] text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full font-medium">Default</span>
                             </label>
-                            <input type="text" name="customer_identifier" id="customer_identifier" value="{{ old('customer_identifier') }}" autocomplete="off" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('customer_identifier') border-red-500 @enderror" placeholder="Ketik nomor / cari identitas..." {{ $initialIsMaterai ? '' : 'required' }}>
+
+                            @php
+                                $displayIdent = old('customer_identifier');
+                                if ($initialIsSpp && $displayIdent && str_starts_with($displayIdent, '98844565')) {
+                                    $displayIdent = substr($displayIdent, 8);
+                                }
+                            @endphp
+
+                            <div class="relative flex rounded-lg">
+                                <span id="sppPrefixAddon" class="items-center px-3.5 rounded-l-lg border border-r-0 border-gray-300 bg-gray-100 text-gray-700 font-mono text-sm font-bold select-none tracking-wider transition-all {{ $initialIsSpp ? 'inline-flex' : 'hidden' }}" style="{{ $initialIsSpp ? 'display: inline-flex;' : 'display: none !important;' }}">
+                                    98844565
+                                </span>
+                                <input type="text" name="customer_identifier" id="customer_identifier" value="{{ $displayIdent }}" autocomplete="off" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 transition-all {{ $initialIsSpp ? 'rounded-r-lg font-mono' : 'rounded-lg' }} @error('customer_identifier') border-red-500 @enderror" placeholder="{{ $initialIsSpp ? 'Ketik NIS siswa (contoh: 12511177)...' : 'Ketik nomor / cari identitas...' }}" {{ $initialIsMaterai ? '' : 'required' }}>
+                            </div>
+
                             <div id="identifierSuggestions" class="absolute left-0 right-0 z-30 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 hidden max-h-48 overflow-y-auto divide-y divide-gray-100"></div>
                             @error('customer_identifier')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
@@ -82,8 +97,8 @@
 
                     <!-- Nama Customer -->
                     <div class="relative mb-4">
-                        <label for="customer_name" class="block mb-2 text-sm font-medium text-gray-700">Nama Customer</label>
-                        <input type="text" name="customer_name" id="customer_name" value="{{ old('customer_name') }}" autocomplete="off" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('customer_name') border-red-500 @enderror" placeholder="Nama otomatis terisi atau ketik manual..." required>
+                        <label for="customer_name" id="nameLabel" class="block mb-2 text-sm font-medium text-gray-700">{{ $initialIsSpp ? 'Nama Siswa' : 'Nama Customer' }}</label>
+                        <input type="text" name="customer_name" id="customer_name" value="{{ old('customer_name') }}" autocomplete="off" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('customer_name') border-red-500 @enderror" placeholder="{{ $initialIsSpp ? 'Nama siswa otomatis terisi atau ketik manual...' : 'Nama otomatis terisi atau ketik manual...' }}" required>
                         <div id="nameSuggestions" class="absolute left-0 right-0 z-30 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 hidden max-h-48 overflow-y-auto divide-y divide-gray-100"></div>
                         @error('customer_name')
                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
@@ -93,7 +108,7 @@
                     <!-- Regular: Nominal Uang & Biaya Admin -->
                     <div id="regularAmountWrapper" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 {{ $initialIsMaterai ? 'hidden' : '' }}">
                         <div>
-                            <label for="amount" class="block mb-2 text-sm font-medium text-gray-700">Nominal Uang (Rp)</label>
+                            <label for="amount" id="amountLabel" class="block mb-2 text-sm font-medium text-gray-700">{{ $initialIsSpp ? 'Nominal SPP (Rp)' : 'Nominal Uang (Rp)' }}</label>
                             <input type="number" name="amount" id="amount" value="{{ old('amount') }}" min="0" step="any" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5 @error('amount') border-red-500 @enderror" placeholder="0" {{ $initialIsMaterai ? '' : 'required' }}>
                             @error('amount')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
@@ -135,7 +150,7 @@
                     <!-- Catatan Tambahan (Opsional) -->
                     <div class="mb-4">
                         <label for="notes" class="block mb-2 text-sm font-medium text-gray-700">Catatan <span class="text-xs text-gray-400 font-normal">(Opsional)</span></label>
-                        <input type="text" name="notes" id="notes" value="{{ old('notes') }}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" placeholder="Contoh: Transaksi reguler / transfer via kartu BNI">
+                        <input type="text" name="notes" id="notes" value="{{ old('notes') }}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" placeholder="{{ $initialIsSpp ? 'Contoh: SPP Bulan Oktober / Kelas XI RPL 1' : 'Contoh: Transaksi reguler / transfer via kartu BNI' }}">
                     </div>
 
                     <!-- Total Pembayaran Banner -->
@@ -272,6 +287,13 @@
         return code.includes('materai') || code.includes('mtr') || text.includes('materai');
     }
 
+    function checkIsSpp(option) {
+        if (!option) return false;
+        const code = (option.getAttribute('data-code') || '').toLowerCase();
+        const text = (option.textContent || option.innerText || '').toLowerCase();
+        return code.includes('spp') || text.includes('spp');
+    }
+
     // 2. Kalkulasi Live Total Pembayaran
     function updateTotal() {
         const selectedOption = typeSelect ? typeSelect.options[typeSelect.selectedIndex] : null;
@@ -343,12 +365,27 @@
                     data.forEach(item => {
                         const div = document.createElement('div');
                         div.className = 'p-2.5 hover:bg-orange-50 cursor-pointer text-xs flex justify-between items-center transition-colors';
+                        
+                        const selectedOption = typeSelect ? typeSelect.options[typeSelect.selectedIndex] : null;
+                        const isSpp = checkIsSpp(selectedOption);
+
+                        let identDisplay = item.customer_identifier;
+                        if (isSpp && item.customer_identifier.startsWith('98844565')) {
+                            identDisplay = `<span class="text-gray-400 font-mono font-medium">98844565</span><span class="font-bold font-mono text-orange-600">${item.customer_identifier.substring(8)}</span>`;
+                        } else {
+                            identDisplay = `<span class="font-bold text-gray-800">${item.customer_identifier}</span>`;
+                        }
+
                         div.innerHTML = `
-                            <span class="font-bold text-gray-800">${item.customer_identifier}</span>
+                            <div class="flex items-center gap-1">${identDisplay}</div>
                             <span class="text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded text-[11px] font-medium">${item.customer_name}</span>
                         `;
                         div.addEventListener('click', () => {
-                            document.getElementById('customer_identifier').value = item.customer_identifier;
+                            let identVal = item.customer_identifier;
+                            if (isSpp && identVal.startsWith('98844565')) {
+                                identVal = identVal.substring(8);
+                            }
+                            document.getElementById('customer_identifier').value = identVal;
                             document.getElementById('customer_name').value = item.customer_name;
                             document.getElementById('is_default').value = '1';
                             document.getElementById('defaultBadge').classList.remove('hidden');
@@ -367,6 +404,13 @@
     }
 
     identInput.addEventListener('input', (e) => {
+        const selectedOption = typeSelect ? typeSelect.options[typeSelect.selectedIndex] : null;
+        const isSpp = checkIsSpp(selectedOption);
+
+        if (isSpp && identInput.value.startsWith('98844565')) {
+            identInput.value = identInput.value.substring(8);
+        }
+
         document.getElementById('is_default').value = '';
         document.getElementById('defaultBadge').classList.add('hidden');
         fetchSuggestions(e.target.value, 'identifier');
@@ -388,10 +432,17 @@
         }
     });
 
-    // 4. Toggle Tampilan Jenis Transaksi (Materai vs Reguler)
+    // 4. Toggle Tampilan Jenis Transaksi (Materai vs SPP vs Reguler)
     function syncTransactionType() {
         const selectedOption = typeSelect.options[typeSelect.selectedIndex];
         const isMaterai = checkIsMaterai(selectedOption);
+        const isSpp = checkIsSpp(selectedOption);
+
+        const identHint = document.getElementById('identifierHint');
+        const identTitle = document.getElementById('identifierTitle');
+        const nameLabel = document.getElementById('nameLabel');
+        const amountLabel = document.getElementById('amountLabel');
+        const notesInput = document.getElementById('notes');
 
         if (isMaterai) {
             identWrapper.classList.add('hidden');
@@ -404,6 +455,13 @@
 
             amountInput.removeAttribute('required');
             if (stampQtyInput) stampQtyInput.setAttribute('required', 'required');
+
+            const sppPrefixAddon = document.getElementById('sppPrefixAddon');
+            if (sppPrefixAddon) {
+                sppPrefixAddon.classList.add('hidden');
+                sppPrefixAddon.classList.remove('inline-flex');
+                sppPrefixAddon.style.display = 'none';
+            }
         } else {
             identWrapper.classList.remove('hidden');
             typeWrapper.classList.remove('md:col-span-2');
@@ -414,6 +472,46 @@
 
             amountInput.setAttribute('required', 'required');
             if (stampQtyInput) stampQtyInput.removeAttribute('required');
+
+            const sppPrefixAddon = document.getElementById('sppPrefixAddon');
+            if (isSpp) {
+                if (sppPrefixAddon) {
+                    sppPrefixAddon.classList.remove('hidden');
+                    sppPrefixAddon.classList.add('inline-flex');
+                    sppPrefixAddon.style.display = 'inline-flex';
+                }
+                identInput.classList.remove('rounded-lg');
+                identInput.classList.add('rounded-r-lg', 'font-mono');
+                if (identTitle) identTitle.textContent = 'Identitas Siswa (NIS/NISN)';
+                if (identHint) identHint.textContent = '(Nomor VA: 98844565 + NIS)';
+                identInput.placeholder = 'Ketik NIS siswa (contoh: 12511177)...';
+                if (nameLabel) nameLabel.textContent = 'Nama Siswa';
+                nameInput.placeholder = 'Nama siswa otomatis terisi atau ketik manual...';
+                if (amountLabel) amountLabel.textContent = 'Nominal SPP (Rp)';
+                if (notesInput && (!notesInput.value || notesInput.value === '')) {
+                    notesInput.placeholder = 'Contoh: SPP Bulan Oktober / Kelas XI RPL 1';
+                }
+                if (identInput.value.startsWith('98844565')) {
+                    identInput.value = identInput.value.substring(8);
+                }
+            } else {
+                if (sppPrefixAddon) {
+                    sppPrefixAddon.classList.add('hidden');
+                    sppPrefixAddon.classList.remove('inline-flex');
+                    sppPrefixAddon.style.display = 'none';
+                }
+                identInput.classList.add('rounded-lg');
+                identInput.classList.remove('rounded-r-lg', 'font-mono');
+                if (identTitle) identTitle.textContent = 'Identitas Customer';
+                if (identHint) identHint.textContent = '(No. Rek / No. HP / IDPEL)';
+                identInput.placeholder = 'Ketik nomor / cari identitas...';
+                if (nameLabel) nameLabel.textContent = 'Nama Customer';
+                nameInput.placeholder = 'Nama otomatis terisi atau ketik manual...';
+                if (amountLabel) amountLabel.textContent = 'Nominal Uang (Rp)';
+                if (notesInput && (!notesInput.value || notesInput.value === '')) {
+                    notesInput.placeholder = 'Contoh: Transaksi reguler / transfer via kartu BNI';
+                }
+            }
         }
 
         document.getElementById('is_default').value = '';
@@ -438,6 +536,7 @@
 
         const selectedOption = typeSelect.options[typeSelect.selectedIndex];
         const isMaterai = checkIsMaterai(selectedOption);
+        const isSpp = checkIsSpp(selectedOption);
         const stampsStock = {{ $stampsStock }};
 
         if (isMaterai) {
@@ -484,13 +583,15 @@
             return;
         }
 
+        const fullIdent = (isSpp && !ident.startsWith('98844565')) ? ('98844565' + ident) : ident;
+
         try {
-            const res = await fetch(`${checkDefaultUrl}?transaction_type_id=${typeId}&customer_name=${encodeURIComponent(name)}&customer_identifier=${encodeURIComponent(ident)}`);
+            const res = await fetch(`${checkDefaultUrl}?transaction_type_id=${typeId}&customer_name=${encodeURIComponent(name)}&customer_identifier=${encodeURIComponent(fullIdent)}`);
             const data = await res.json();
 
             if (data.requires_verification) {
                 document.getElementById('modalCustomerName').textContent = name;
-                document.getElementById('modalCustomerIdent').textContent = ident;
+                document.getElementById('modalCustomerIdent').textContent = fullIdent;
                 document.getElementById('defaultVerificationModal').classList.remove('hidden');
             } else {
                 document.getElementById('is_default').value = data.is_current_default ? '1' : '0';
