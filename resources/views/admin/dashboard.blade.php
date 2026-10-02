@@ -19,7 +19,7 @@
                 </div>
                 <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                     <p class="text-sm font-medium text-gray-500 mb-1">Kasir Hadir</p>
-                    <h3 class="text-2xl font-bold text-teal-600">{{ $presentCashiersCount }} / {{ $totalCashiersCount }} Siswa</h3>
+                    <h3 class="text-2xl font-bold text-teal-600">{{ $presentCashiersCount }} / {{ $maxCashiersCount ?? 3 }} Siswa</h3>
                 </div>
             </div>
 

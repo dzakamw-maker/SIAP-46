@@ -24,8 +24,9 @@ class AdminController extends Controller
         $latestBniRecap = DailyRecap::latest('recap_date')->first();
         $latestBniBalance = (float) ($latestBniRecap?->bni_balance_remaining ?? 0);
 
-        $totalCashiersCount = User::whereRelation('role', 'name', 'Kasir')->where('is_active', true)->count();
-        $presentCashiersCount = StaffAttendance::whereDate('attendance_date', $today)->count();
+        $maxCashiersCount = 3;
+        $totalCashiersCount = $maxCashiersCount;
+        $presentCashiersCount = min($maxCashiersCount, StaffAttendance::whereDate('attendance_date', $today)->distinct('user_id')->count('user_id'));
 
         $recentTransactions = Transaction::with(['customer', 'transactionType'])
             ->latest('id')
@@ -42,6 +43,7 @@ class AdminController extends Controller
             'todayTransactionsCount',
             'todayTotalNominal',
             'latestBniBalance',
+            'maxCashiersCount',
             'totalCashiersCount',
             'presentCashiersCount',
             'recentTransactions',
