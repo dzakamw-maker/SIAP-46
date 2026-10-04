@@ -120,11 +120,33 @@ class AdminController extends Controller
         return view('admin.attendance', compact('attendances'));
     }
 
-    public function users()
+    public function users(Request $request): View
     {
-        $users = User::with('role')->get();
+        $search = trim((string) $request->query('search', ''));
+        $selectedRole = trim((string) $request->query('role', ''));
+        $selectedStatus = $request->query('status');
 
-        return view('admin.users', compact('users'));
+        $roles = Role::all();
+
+        $users = User::with('role')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('full_name', 'like', "%{$search}%")
+                        ->orWhere('username', 'like', "%{$search}%")
+                        ->orWhere('student_number', 'like', "%{$search}%")
+                        ->orWhere('class_group', 'like', "%{$search}%");
+                });
+            })
+            ->when($selectedRole !== '', function ($query) use ($selectedRole) {
+                $query->whereRelation('role', 'name', $selectedRole);
+            })
+            ->when($selectedStatus !== null && $selectedStatus !== '', function ($query) use ($selectedStatus) {
+                $query->where('is_active', (bool) $selectedStatus);
+            })
+            ->latest('id')
+            ->get();
+
+        return view('admin.users', compact('users', 'search', 'selectedRole', 'selectedStatus', 'roles'));
     }
 
     public function createUser(): View

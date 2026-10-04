@@ -335,4 +335,76 @@ class UserManagementTest extends TestCase
         $admin->refresh();
         $this->assertEquals('Admin Test Updated', $admin->full_name);
     }
+
+    public function test_admin_can_view_users_list(): void
+    {
+        $adminRole = Role::create(['name' => 'Admin']);
+        $admin = User::create([
+            'role_id' => $adminRole->id,
+            'full_name' => 'Admin Utama',
+            'username' => 'admin_utama',
+            'password' => 'secret123',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.users'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Kelola User');
+        $response->assertSee('Admin Utama');
+        $response->assertSee('searchUserInput', false);
+    }
+
+    public function test_admin_can_search_users_by_name_or_username(): void
+    {
+        $adminRole = Role::create(['name' => 'Admin']);
+        $kasirRole = Role::create(['name' => 'Kasir']);
+
+        $admin = User::create([
+            'role_id' => $adminRole->id,
+            'full_name' => 'Admin Utama',
+            'username' => 'admin_utama',
+            'password' => 'secret123',
+            'is_active' => true,
+        ]);
+
+        $kasirBudi = User::create([
+            'role_id' => $kasirRole->id,
+            'full_name' => 'Budi Sudarsono',
+            'username' => 'budi_sud',
+            'student_number' => '998877',
+            'class_group' => 'XI RPL 1',
+            'password' => 'secret123',
+            'is_active' => true,
+        ]);
+
+        $kasirSiti = User::create([
+            'role_id' => $kasirRole->id,
+            'full_name' => 'Siti Nurhaliza',
+            'username' => 'siti_nur',
+            'student_number' => '112233',
+            'class_group' => 'XI AKL 2',
+            'password' => 'secret123',
+            'is_active' => true,
+        ]);
+
+        // Search by name "Budi"
+        $responseName = $this->actingAs($admin)->get(route('admin.users', ['search' => 'Budi']));
+        $responseName->assertStatus(200);
+        $responseName->assertSee('Budi Sudarsono');
+        $responseName->assertDontSee('Siti Nurhaliza');
+
+        // Search by student number
+        $responseNis = $this->actingAs($admin)->get(route('admin.users', ['search' => '112233']));
+        $responseNis->assertStatus(200);
+        $responseNis->assertSee('Siti Nurhaliza');
+        $responseNis->assertDontSee('Budi Sudarsono');
+
+        // Search with non-existent query
+        $responseEmpty = $this->actingAs($admin)->get(route('admin.users', ['search' => 'OrangTidakAda123']));
+        $responseEmpty->assertStatus(200);
+        $responseEmpty->assertSee('Tidak ada user yang cocok');
+        $responseEmpty->assertDontSee('Budi Sudarsono');
+        $responseEmpty->assertDontSee('Siti Nurhaliza');
+    }
 }

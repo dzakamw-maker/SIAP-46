@@ -18,33 +18,37 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $adminRole = Role::create([
-            'name' => 'Admin',
-            'description' => 'Administrator / Guru',
-        ]);
+        $adminRole = Role::firstOrCreate(
+            ['name' => 'Admin'],
+            ['description' => 'Administrator / Guru']
+        );
 
-        $kasirRole = Role::create([
-            'name' => 'Kasir',
-            'description' => 'Siswa / Kasir BNI',
-        ]);
+        $kasirRole = Role::firstOrCreate(
+            ['name' => 'Kasir'],
+            ['description' => 'Siswa / Kasir BNI']
+        );
 
-        User::create([
-            'role_id' => $adminRole->id,
-            'full_name' => 'Guru Pembimbing',
-            'username' => env('ADMIN_USERNAME'),
-            'password' => env('ADMIN_PASSWORD'),
-            'is_active' => true,
-        ]);
+        User::firstOrCreate(
+            ['username' => env('ADMIN_USERNAME', 'admin')],
+            [
+                'role_id' => $adminRole->id,
+                'full_name' => 'Guru Pembimbing',
+                'password' => env('ADMIN_PASSWORD', 'password'),
+                'is_active' => true,
+            ]
+        );
 
-        User::create([
-            'role_id' => $kasirRole->id,
-            'full_name' => 'Agus Setiawan',
-            'student_number' => '123456789',
-            'class_group' => 'XI RPL 1',
-            'username' => env('KASIR_USERNAME'),
-            'password' => env('KASIR_PASSWORD'),
-            'is_active' => true,
-        ]);
+        User::firstOrCreate(
+            ['username' => env('KASIR_USERNAME', 'kasir')],
+            [
+                'role_id' => $kasirRole->id,
+                'full_name' => 'Agus Setiawan',
+                'student_number' => '123456789',
+                'class_group' => 'XI RPL 1',
+                'password' => env('KASIR_PASSWORD', 'password'),
+                'is_active' => true,
+            ]
+        );
 
         $types = [
             'Setor Tunai BNI', 'Setor Tunai Antar Bank', 'PULSA- INDOSAT', 'PULSA-TSEL',
